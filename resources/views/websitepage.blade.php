@@ -32,9 +32,6 @@
 
   <script>
     // Example JS interaction
-    document.querySelector('.sign-up').addEventListener('click', () => {
-      alert('Sign Up functionality coming soon!');
-    });
   </script>
 </body>
 </html>

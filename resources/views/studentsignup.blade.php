@@ -100,28 +100,39 @@
     <h1>Create an account</h1>
     <p class="sub">Already have an account? <a href="{{ route('signin') }}">Sign in instead</a></p>
 
+    @if ($errors->any())
+      <div style="background: #fee; color: #c00; padding: 10px; border-radius: 4px; margin-bottom: 20px; text-align: left;">
+        @foreach ($errors->all() as $error)
+          <p style="margin: 4px 0; font-size: 13px;">{{ $error }}</p>
+        @endforeach
+      </div>
+    @endif
+
     <div class="tabs">
       <button class="tab active">Student</button>
     </div>
 
-    <div class="form-group">
-      <label>Full Name</label>
-      <input type="text" placeholder="Juan Dela Cruz"/>
-    </div>
-    <div class="form-group">
-      <label>ID Number</label>
-      <input type="text" placeholder="2024-12345"/>
-    </div>
-    <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" placeholder="juan@lnu.edu.ph"/>
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" placeholder="••••••••"/>
-    </div>
+    <form method="POST" action="{{ route('signup.store') }}">
+      @csrf
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" name="name" placeholder="Juan Dela Cruz" value="{{ old('name') }}" required/>
+      </div>
+      <div class="form-group">
+        <label>Student ID</label>
+        <input type="text" name="student_id" placeholder="2024-12345" value="{{ old('student_id') }}" required/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="••••••••" required/>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" name="password_confirmation" placeholder="••••••••" required/>
+      </div>
 
-    <button class="btn-submit" onclick="location.href='{{ route('student-home') }}'">Create Account</button>
+      <button type="submit" class="btn-submit">Create Account</button>
+    </form>
   </div>
 </body>
 </html>

@@ -17,7 +17,12 @@ class DatabaseSeeder extends Seeder
 
         User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'student_id' => 'TEST-001',
+            'password' => bcrypt('password'),
+        ]);
+
+        $this->call([
+            RoomSeeder::class,
         ]);
     }
 }
