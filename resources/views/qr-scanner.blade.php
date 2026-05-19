@@ -277,6 +277,9 @@
     const submitBtn = document.getElementById('submit-btn');
     const qrInput = document.getElementById('qr-input');
     const statusDiv = document.getElementById('camera-status');
+    const video = document.getElementById('scanner-video');
+    const loading = document.getElementById('loading');
+    const resultDiv = document.getElementById('result');
 
     function showStatus(message) {
       statusDiv.textContent = message;
@@ -458,10 +461,7 @@
           requestAnimationFrame(scanQRCodeFromCamera);
         }
       } catch (err) {
-        console.error('QR scan error:', err);) {
-        qrInput.value = code.data;
-        scanQRCode(code.data);
-      } else {
+        console.error('QR scan error:', err);
         requestAnimationFrame(scanQRCodeFromCamera);
       }
     }
