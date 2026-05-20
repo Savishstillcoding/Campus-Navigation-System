@@ -197,23 +197,34 @@
 
     // Load rooms from API
     async function loadRooms() {
-      if (roomsLoaded) return;
+      if (roomsLoaded) return Promise.resolve();
       
-      try {
-        const response = await fetch('/api/qr/rooms');
-        const result = await response.json();
-        allRooms = result.data || [];
-        roomsLoaded = true;
-        console.log('Rooms loaded:', allRooms);
-        
-        // Initial render of all rooms
-        renderRooms(allRooms);
-        
-        // Setup event listeners for search and filters
-        setupEventListeners();
-      } catch (error) {
-        console.error('Error loading rooms:', error);
-      }
+      return new Promise((resolve) => {
+        try {
+          fetch('/api/qr/rooms')
+            .then(response => response.json())
+            .then(result => {
+              allRooms = result.data || [];
+              roomsLoaded = true;
+              console.log('Rooms loaded:', allRooms);
+              
+              // Initial render of all rooms
+              renderRooms(allRooms);
+              
+              // Setup event listeners for search and filters
+              setupEventListeners();
+              
+              resolve();
+            })
+            .catch(error => {
+              console.error('Error loading rooms:', error);
+              resolve();
+            });
+        } catch (error) {
+          console.error('Error in loadRooms:', error);
+          resolve();
+        }
+      });
     }
 
     // Setup search and filter event listeners
@@ -559,15 +570,14 @@
         }
       }
       
-      loadRooms();
-      setupFloorSelector();
-      
-      // If we have a scanned room, navigate to the map section
-      if (scannedRoomId && scannedRoomFloor) {
-        setTimeout(() => {
+      loadRooms().then(() => {
+        setupFloorSelector();
+        
+        // If we have a scanned room, navigate to the map section
+        if (scannedRoomId && scannedRoomFloor) {
           navigateToSection('map');
-        }, 100);
-      }
+        }
+      });
     });
   </script>
 </body>
