@@ -31,6 +31,8 @@ Route::get('/qr-scanner', function () {
     return view('qr-scanner');
 })->name('qr-scanner');
 
+Route::get('/room/{id}', [QRController::class, 'show'])->name('room.details');
+
 Route::get('/visitor-home', function () {
     return view('main');
 })->name('visitor-home');

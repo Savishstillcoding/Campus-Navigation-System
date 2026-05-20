@@ -74,4 +74,18 @@ class QRController extends Controller
             'data' => $rooms,
         ], 200);
     }
+
+    /**
+     * Show a specific room with QR code details
+     */
+    public function show($id)
+    {
+        $room = Room::find($id);
+
+        if (!$room) {
+            return redirect()->route('student-home')->with('error', 'Room not found.');
+        }
+
+        return view('room-details', ['room' => $room]);
+    }
 }

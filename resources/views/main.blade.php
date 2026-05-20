@@ -281,7 +281,7 @@
         <div class="room-card" data-floor="${room.floor}" data-room-id="${room.id}">
           <div class="room-card-header">
             <div class="room-card-title">${room.room_name}</div>
-            <button class="room-card-link" title="View details">🔗</button>
+            <button class="room-card-link" title="View details" data-room-id="${room.id}">🔗</button>
           </div>
           <div class="room-card-type">${room.description}</div>
           <div class="room-card-info">
@@ -296,6 +296,8 @@
       document.querySelectorAll('.room-card-link').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
+          const roomId = btn.getAttribute('data-room-id');
+          window.location.href = `/room/${roomId}`;
         });
       });
     }
