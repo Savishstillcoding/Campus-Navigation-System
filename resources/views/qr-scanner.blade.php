@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Code Scanner - LNU Smart Nav</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -51,58 +51,14 @@
       margin-bottom: 24px;
     }
 
-    #scanner-video {
-      display: none;
-    }
-
-    .scanner-section {
-      margin-bottom: 24px;
-      position: relative;
-    }
-
-    .scanner-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
+    #qr-reader {
       width: 100%;
-      height: auto;
-      border-radius: 12px;
-      z-index: 10;
-      pointer-events: none;
-    }
-
-    @keyframes scanLine {
-      0% {
-        top: 0%;
-      }
-      100% {
-        top: 100%;
-      }
-    }
-
-    .scan-indicator {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, #ff6b6b, transparent);
-      animation: scanLine 2s linear infinite;
-      z-index: 11;
-    }
-
-    .scanner-placeholder {
-      width: 100%;
-      aspect-ratio: 1;
-      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 48px;
-      color: #cbd5e1;
       margin-bottom: 16px;
+    }
+
+    #qr-reader video {
+      width: 100%;
+      border-radius: 12px;
     }
 
     .input-group {
@@ -143,6 +99,12 @@
     .btn-primary:hover {
       background: #5568d3;
       transform: translateY(-2px);
+    }
+
+    .btn-primary:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      transform: none;
     }
 
     .btn-secondary {
@@ -270,6 +232,17 @@
       transform: translateY(0);
     }
 
+    #camera-status {
+      text-align: center;
+      padding: 12px;
+      margin-bottom: 16px;
+      background: #fef3c7;
+      border-radius: 8px;
+      display: none;
+      color: #92400e;
+      font-size: 13px;
+    }
+
     @media (max-width: 480px) {
       .container {
         padding: 20px;
@@ -292,16 +265,10 @@
       <p>Scan a QR code to find your room</p>
     </div>
 
+    <div id="camera-status"></div>
+
     <div class="scanner-section">
-      <div class="scanner-placeholder">📍</div>
-      <video 
-        id="scanner-video" 
-        autoplay 
-        playsinline 
-        muted
-        style="width: 100%; border-radius: 12px; display: none; background: #f1f5f9;">
-      </video>
-      <canvas id="scanner-canvas" style="display: none;"></canvas>
+      <div id="qr-reader" style="width: 100%;"></div>
       
       <div class="input-group">
         <input 
@@ -318,9 +285,6 @@
       </div>
     </div>
 
-    <div id="camera-status" style="text-align: center; padding: 12px; margin-bottom: 16px; background: #fef3c7; border-radius: 8px; display: none; color: #92400e; font-size: 13px;"></div>
-    </div>
-
     <div class="loading" id="loading">
       <div class="spinner"></div>
       <p>Scanning...</p>
@@ -333,16 +297,15 @@
   </div>
 
   <script>
-    let stream = null;
+    let html5QrcodeScanner = null;
     let cameraActive = false;
-    let scanningActive = false;
-    let scanTimeout = null;
+    let lastScannedCode = null;
+    let scanCooldown = false;
 
     const startBtn = document.getElementById('start-scanner-btn');
     const submitBtn = document.getElementById('submit-btn');
     const qrInput = document.getElementById('qr-input');
     const statusDiv = document.getElementById('camera-status');
-    const video = document.getElementById('scanner-video');
     const loading = document.getElementById('loading');
     const resultDiv = document.getElementById('result');
 
@@ -357,102 +320,106 @@
 
     startBtn.addEventListener('click', async () => {
       if (!cameraActive) {
-        try {
-          showStatus('Requesting camera access...');
-          
-          const constraints = {
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            },
-            audio: false
-          };
-
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-          video.srcObject = stream;
-          video.style.display = 'block';
-          
-          // Add scan indicator
-          const indicator = document.createElement('div');
-          indicator.id = 'scanner-scan-indicator';
-          indicator.className = 'scan-indicator';
-          video.parentElement.appendChild(indicator);
-          
-          showStatus('Camera started. Point at a QR code...');
-          console.log('Camera stream started');
-          
-          // Wait for video to be ready
-          const videoReadyHandler = () => {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-              video.removeEventListener('loadedmetadata', videoReadyHandler);
-              console.log('Video metadata loaded. Dimensions:', video.videoWidth, 'x', video.videoHeight);
-              cameraActive = true;
-              scanningActive = true;
-              startBtn.textContent = 'Stop Camera';
-              scanQRCodeFromCamera();
-            }
-          };
-          
-          video.addEventListener('loadedmetadata', videoReadyHandler);
-          
-          // Fallback timeout in case loadedmetadata doesn't fire
-          setTimeout(() => {
-            if (!cameraActive && stream) {
-              console.log('Fallback timeout triggered. Starting scan.');
-              cameraActive = true;
-              scanningActive = true;
-              startBtn.textContent = 'Stop Camera';
-              scanQRCodeFromCamera();
-            }
-          }, 2000);
-
-        } catch (err) {
-          showStatus('Camera Error: ' + err.message);
-          console.error('Camera error:', err);
-          alert('Unable to access camera:\n' + err.message + '\n\nPlease check your browser permissions and try again.');
-        }
+        startScanner();
       } else {
-        // Stop camera
-        stopCamera();
+        stopScanner();
       }
     });
 
-    function stopCamera() {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
+    function startScanner() {
+      try {
+        showStatus('Initializing camera...');
+        
+        html5QrcodeScanner = new Html5Qrcode('qr-reader');
+        
+        const qrboxFunction = () => {
+          let minDimensionPx = Math.min(window.innerWidth, window.innerHeight);
+          let qrboxsize = Math.floor(minDimensionPx * 0.8);
+          return { width: qrboxsize, height: qrboxsize };
+        };
+
+        const config = {
+          fps: 10,
+          qrbox: qrboxFunction,
+          rememberLastUsedCamera: true,
+          supportedScanTypes: [Html5QrcodeScanType.CAMERA],
+          useBarCodeDetectorIfSupported: true
+        };
+
+        html5QrcodeScanner.start(
+          { facingMode: 'environment' },
+          config,
+          onScanSuccess,
+          onScanFailure
+        ).then(() => {
+          cameraActive = true;
+          startBtn.textContent = 'Stop Camera';
+          showStatus('Camera active. Point at a QR code...');
+          console.log('✓ Camera started successfully');
+        }).catch(err => {
+          console.error('Camera start error:', err);
+          showStatus('Camera Error: ' + err.message);
+          alert('Unable to access camera:\n' + err.message + '\n\nPlease check your browser permissions and try again.');
+        });
+
+      } catch (err) {
+        showStatus('Camera Error: ' + err.message);
+        console.error('Scanner error:', err);
+        alert('Error initializing scanner:\n' + err.message);
       }
-      if (scanTimeout) {
-        clearTimeout(scanTimeout);
+    }
+
+    function stopScanner() {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+          cameraActive = false;
+          startBtn.textContent = 'Start Camera';
+          hideStatus();
+          console.log('Camera stopped');
+        }).catch(err => {
+          console.error('Error stopping scanner:', err);
+        });
       }
-      
-      // Remove scan indicator
-      const indicator = document.getElementById('scanner-scan-indicator');
-      if (indicator) {
-        indicator.remove();
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      // Prevent duplicate scans
+      if (scanCooldown || lastScannedCode === decodedText) {
+        return;
       }
-      
-      video.style.display = 'none';
-      cameraActive = false;
-      scanningActive = false;
-      startBtn.textContent = 'Start Camera';
-      hideStatus();
-      console.log('Camera stopped');
+
+      scanCooldown = true;
+      lastScannedCode = decodedText;
+
+      console.log('✓ QR Code detected:', decodedText);
+      qrInput.value = decodedText;
+      stopScanner();
+      scanQRCode(decodedText);
+
+      // Cooldown to prevent rapid re-scanning
+      setTimeout(() => {
+        scanCooldown = false;
+      }, 2000);
+    }
+
+    function onScanFailure(error) {
+      // Silent failure - just continue scanning
+      // console.debug('QR scan attempt:', error);
     }
 
     submitBtn.addEventListener('click', () => {
       if (qrInput.value.trim()) {
+        if (cameraActive) {
+          stopScanner();
+        }
         scanQRCode(qrInput.value.trim());
       } else {
         showStatus('Please enter a QR code');
       }
     });
 
-    function scanQRCode(manualCode = null) {
-      const codeToScan = manualCode || qrInput.value;
-      
-      if (!codeToScan && !cameraActive) {
+    function scanQRCode(codeToScan) {
+      if (!codeToScan) {
         showStatus('Please enter a QR code or start the camera');
         return;
       }
@@ -476,9 +443,6 @@
         
         if (data.success) {
           displayRoomInfo(data.data);
-          if (cameraActive) {
-            stopCamera();
-          }
         } else {
           displayError(data.message);
         }
@@ -487,118 +451,6 @@
         loading.classList.remove('active');
         displayError('Error: ' + err.message);
       });
-    }
-
-    function isImageDataValid(imageData) {
-      // Check if image data contains actual content (not just noise/black frames)
-      const data = imageData.data;
-      let brightPixels = 0;
-      let darkPixels = 0;
-      
-      // Sample every 4th pixel for performance
-      for (let i = 0; i < data.length; i += 16) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        const brightness = (r + g + b) / 3;
-        
-        if (brightness > 200) brightPixels++;
-        if (brightness < 50) darkPixels++;
-      }
-      
-      // Must have a reasonable mix of light and dark areas (indicates a real image)
-      const sampleCount = data.length / 16;
-      const brightRatio = brightPixels / sampleCount;
-      const darkRatio = darkPixels / sampleCount;
-      
-      // If more than 90% is uniform (all bright or all dark), it's likely corrupted
-      return !(brightRatio > 0.9 || darkRatio > 0.9);
-    }
-
-    function scanQRCodeFromCamera() {
-      if (!scanningActive) {
-        console.log('Scanning stopped');
-        return;
-      }
-
-      // Check if jsQR is available
-      if (typeof jsQR === 'undefined') {
-        console.error('jsQR library not loaded yet, retrying...');
-        showStatus('Loading QR library... Please wait.');
-        scanTimeout = setTimeout(scanQRCodeFromCamera, 500);
-        return;
-      }
-
-      // Check if video has valid dimensions
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
-        console.log('Video not ready (dimensions: 0x0), retrying...');
-        scanTimeout = setTimeout(scanQRCodeFromCamera, 200);
-        return;
-      }
-
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        
-        if (!ctx) {
-          console.error('Failed to get canvas context');
-          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
-          return;
-        }
-        
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        // Draw the current video frame to canvas
-        try {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        } catch (drawErr) {
-          console.error('Error drawing video to canvas:', drawErr);
-          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
-          return;
-        }
-        
-        // Get image data
-        let imageData;
-        try {
-          imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        } catch (imgErr) {
-          console.error('Error getting image data:', imgErr);
-          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
-          return;
-        }
-        
-        if (!imageData || !imageData.data) {
-          console.error('Invalid image data');
-          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
-          return;
-        }
-
-        // Validate that the video frame is not corrupted
-        if (!isImageDataValid(imageData)) {
-          console.log('Video frame appears corrupted or uniformly colored, skipping QR detection');
-          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
-          return;
-        }
-
-        // Detect QR code
-        let code = jsQR(imageData.data, imageData.width, imageData.height);
-        
-        if (code && code.data && code.data.length > 0) {
-          console.log('✓ QR Code detected:', code.data);
-          qrInput.value = code.data;
-          scanningActive = false;
-          scanQRCode(code.data);
-          return;
-        }
-
-        // Continue scanning
-        scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
-        
-      } catch (err) {
-        console.error('Unexpected QR scan error:', err.message);
-        scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
-      }
     }
 
     function displayRoomInfo(room) {
@@ -666,20 +518,10 @@
       document.head.appendChild(meta);
     }
 
-    // Verify jsQR library is loaded
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof jsQR === 'undefined') {
-        console.warn('jsQR library not loaded, waiting...');
-        setTimeout(() => {
-          if (typeof jsQR !== 'undefined') {
-            console.log('jsQR library loaded successfully');
-          } else {
-            console.error('jsQR library failed to load from CDN');
-            showStatus('Warning: QR detection library may not be available. Manual entry is recommended.');
-          }
-        }, 1000);
-      } else {
-        console.log('jsQR library loaded successfully on page load');
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (cameraActive && html5QrcodeScanner) {
+        html5QrcodeScanner.stop().catch(err => console.error('Cleanup error:', err));
       }
     });
   </script>
