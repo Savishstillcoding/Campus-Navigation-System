@@ -489,6 +489,32 @@
       });
     }
 
+    function isImageDataValid(imageData) {
+      // Check if image data contains actual content (not just noise/black frames)
+      const data = imageData.data;
+      let brightPixels = 0;
+      let darkPixels = 0;
+      
+      // Sample every 4th pixel for performance
+      for (let i = 0; i < data.length; i += 16) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const brightness = (r + g + b) / 3;
+        
+        if (brightness > 200) brightPixels++;
+        if (brightness < 50) darkPixels++;
+      }
+      
+      // Must have a reasonable mix of light and dark areas (indicates a real image)
+      const sampleCount = data.length / 16;
+      const brightRatio = brightPixels / sampleCount;
+      const darkRatio = darkPixels / sampleCount;
+      
+      // If more than 90% is uniform (all bright or all dark), it's likely corrupted
+      return !(brightRatio > 0.9 || darkRatio > 0.9);
+    }
+
     function scanQRCodeFromCamera() {
       if (!scanningActive) {
         console.log('Scanning stopped');
@@ -548,10 +574,17 @@
           return;
         }
 
-        // Detect QR code - try with both normal and inverted
+        // Validate that the video frame is not corrupted
+        if (!isImageDataValid(imageData)) {
+          console.log('Video frame appears corrupted or uniformly colored, skipping QR detection');
+          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
+          return;
+        }
+
+        // Detect QR code
         let code = jsQR(imageData.data, imageData.width, imageData.height);
         
-        if (code) {
+        if (code && code.data && code.data.length > 0) {
           console.log('✓ QR Code detected:', code.data);
           qrInput.value = code.data;
           scanningActive = false;

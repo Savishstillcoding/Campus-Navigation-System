@@ -15,6 +15,10 @@ Route::get('/signin', function () {
 
 Route::post('/signin', [AuthController::class, 'signin'])->name('signin.store');
 
+Route::get('/visitor-signin', function () {
+    return view('signIN');
+})->name('visitor-signin');
+
 Route::post('/visitor-signin', [AuthController::class, 'visitorSignin'])->name('visitor.signin');
 
 Route::get('/signup', function () {
