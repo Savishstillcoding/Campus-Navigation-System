@@ -52,10 +52,44 @@
     }
 
     #scanner-video {
-      width: 100%;
-      border-radius: 12px;
       display: none;
-      background: #f1f5f9;
+    }
+
+    .scanner-section {
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .scanner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    @keyframes scanLine {
+      0% {
+        top: 0%;
+      }
+      100% {
+        top: 100%;
+      }
+    }
+
+    .scan-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #ff6b6b, transparent);
+      animation: scanLine 2s linear infinite;
+      z-index: 11;
     }
 
     .scanner-placeholder {
@@ -214,6 +248,28 @@
       border-bottom: none;
     }
 
+    .nav-to-map-btn {
+      width: 100%;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+    }
+
+    .nav-to-map-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    .nav-to-map-btn:active {
+      transform: translateY(0);
+    }
+
     @media (max-width: 480px) {
       .container {
         padding: 20px;
@@ -238,7 +294,14 @@
 
     <div class="scanner-section">
       <div class="scanner-placeholder">📍</div>
-      <video id="scanner-video" autoplay playsinline></video>
+      <video 
+        id="scanner-video" 
+        autoplay 
+        playsinline 
+        muted
+        style="width: 100%; border-radius: 12px; display: none; background: #f1f5f9;">
+      </video>
+      <canvas id="scanner-canvas" style="display: none;"></canvas>
       
       <div class="input-group">
         <input 
@@ -272,6 +335,8 @@
   <script>
     let stream = null;
     let cameraActive = false;
+    let scanningActive = false;
+    let scanTimeout = null;
 
     const startBtn = document.getElementById('start-scanner-btn');
     const submitBtn = document.getElementById('submit-btn');
@@ -308,20 +373,39 @@
           video.srcObject = stream;
           video.style.display = 'block';
           
-          showStatus('Camera started. Point at a QR code...');
+          // Add scan indicator
+          const indicator = document.createElement('div');
+          indicator.id = 'scanner-scan-indicator';
+          indicator.className = 'scan-indicator';
+          video.parentElement.appendChild(indicator);
           
-          // Ensure video is playing
-          video.play().then(() => {
-            cameraActive = true;
-            startBtn.textContent = 'Stop Camera';
-            
-            // Small delay to ensure video is loaded
-            setTimeout(() => {
+          showStatus('Camera started. Point at a QR code...');
+          console.log('Camera stream started');
+          
+          // Wait for video to be ready
+          const videoReadyHandler = () => {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+              video.removeEventListener('loadedmetadata', videoReadyHandler);
+              console.log('Video metadata loaded. Dimensions:', video.videoWidth, 'x', video.videoHeight);
+              cameraActive = true;
+              scanningActive = true;
+              startBtn.textContent = 'Stop Camera';
               scanQRCodeFromCamera();
-            }, 500);
-          }).catch(err => {
-            showStatus('Error playing video: ' + err.message);
-          });
+            }
+          };
+          
+          video.addEventListener('loadedmetadata', videoReadyHandler);
+          
+          // Fallback timeout in case loadedmetadata doesn't fire
+          setTimeout(() => {
+            if (!cameraActive && stream) {
+              console.log('Fallback timeout triggered. Starting scan.');
+              cameraActive = true;
+              scanningActive = true;
+              startBtn.textContent = 'Stop Camera';
+              scanQRCodeFromCamera();
+            }
+          }, 2000);
 
         } catch (err) {
           showStatus('Camera Error: ' + err.message);
@@ -330,15 +414,32 @@
         }
       } else {
         // Stop camera
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
-        video.style.display = 'none';
-        cameraActive = false;
-        startBtn.textContent = 'Start Camera';
-        hideStatus();
+        stopCamera();
       }
     });
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      if (scanTimeout) {
+        clearTimeout(scanTimeout);
+      }
+      
+      // Remove scan indicator
+      const indicator = document.getElementById('scanner-scan-indicator');
+      if (indicator) {
+        indicator.remove();
+      }
+      
+      video.style.display = 'none';
+      cameraActive = false;
+      scanningActive = false;
+      startBtn.textContent = 'Start Camera';
+      hideStatus();
+      console.log('Camera stopped');
+    }
 
     submitBtn.addEventListener('click', () => {
       if (qrInput.value.trim()) {
@@ -376,12 +477,7 @@
         if (data.success) {
           displayRoomInfo(data.data);
           if (cameraActive) {
-            if (stream) {
-              stream.getTracks().forEach(track => track.stop());
-            }
-            video.style.display = 'none';
-            cameraActive = false;
-            startBtn.textContent = 'Start Camera';
+            stopCamera();
           }
         } else {
           displayError(data.message);
@@ -391,6 +487,85 @@
         loading.classList.remove('active');
         displayError('Error: ' + err.message);
       });
+    }
+
+    function scanQRCodeFromCamera() {
+      if (!scanningActive) {
+        console.log('Scanning stopped');
+        return;
+      }
+
+      // Check if jsQR is available
+      if (typeof jsQR === 'undefined') {
+        console.error('jsQR library not loaded yet, retrying...');
+        showStatus('Loading QR library... Please wait.');
+        scanTimeout = setTimeout(scanQRCodeFromCamera, 500);
+        return;
+      }
+
+      // Check if video has valid dimensions
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.log('Video not ready (dimensions: 0x0), retrying...');
+        scanTimeout = setTimeout(scanQRCodeFromCamera, 200);
+        return;
+      }
+
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        if (!ctx) {
+          console.error('Failed to get canvas context');
+          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
+          return;
+        }
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw the current video frame to canvas
+        try {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        } catch (drawErr) {
+          console.error('Error drawing video to canvas:', drawErr);
+          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
+          return;
+        }
+        
+        // Get image data
+        let imageData;
+        try {
+          imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        } catch (imgErr) {
+          console.error('Error getting image data:', imgErr);
+          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
+          return;
+        }
+        
+        if (!imageData || !imageData.data) {
+          console.error('Invalid image data');
+          scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
+          return;
+        }
+
+        // Detect QR code - try with both normal and inverted
+        let code = jsQR(imageData.data, imageData.width, imageData.height);
+        
+        if (code) {
+          console.log('✓ QR Code detected:', code.data);
+          qrInput.value = code.data;
+          scanningActive = false;
+          scanQRCode(code.data);
+          return;
+        }
+
+        // Continue scanning
+        scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
+        
+      } catch (err) {
+        console.error('Unexpected QR scan error:', err.message);
+        scanTimeout = setTimeout(scanQRCodeFromCamera, 100);
+      }
     }
 
     function displayRoomInfo(room) {
@@ -421,10 +596,25 @@
           <span class="info-value">${room.description}</span>
         </div>
         ` : ''}
+        <div class="info-item" style="margin-top: 16px; padding-top: 16px; border-top: 2px solid rgba(21, 128, 61, 0.2);">
+          <button class="nav-to-map-btn" onclick="redirectToMap('${room.id}', '${room.floor}', '${room.room_name}')">
+            🗺️ View on Map
+          </button>
+        </div>
       `;
       
       document.getElementById('room-info').innerHTML = roomHtml;
       resultDiv.style.display = 'block';
+    }
+
+    function redirectToMap(roomId, floor, roomName) {
+      // Store the scanned room data in sessionStorage so the map can access it
+      sessionStorage.setItem('scannedRoomId', roomId);
+      sessionStorage.setItem('scannedRoomFloor', floor);
+      sessionStorage.setItem('scannedRoomName', roomName);
+      
+      // Redirect to the main portal's map section
+      window.location.href = '/main?section=map';
     }
 
     function displayError(message) {
@@ -435,37 +625,6 @@
       resultDiv.style.display = 'block';
     }
 
-    function scanQRCodeFromCamera() {
-      if (!cameraActive) return;
-
-      // Check if video has loaded and has valid dimensions
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
-        requestAnimationFrame(scanQRCodeFromCamera);
-        return;
-      }
-
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-        if (code) {
-          qrInput.value = code.data;
-          scanQRCode(code.data);
-        } else {
-          requestAnimationFrame(scanQRCodeFromCamera);
-        }
-      } catch (err) {
-        console.error('QR scan error:', err);
-        requestAnimationFrame(scanQRCodeFromCamera);
-      }
-    }
-
     // Add CSRF token meta tag if not present
     if (!document.querySelector('meta[name="csrf-token"]')) {
       const meta = document.createElement('meta');
@@ -473,6 +632,23 @@
       meta.content = '{{ csrf_token() }}';
       document.head.appendChild(meta);
     }
+
+    // Verify jsQR library is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof jsQR === 'undefined') {
+        console.warn('jsQR library not loaded, waiting...');
+        setTimeout(() => {
+          if (typeof jsQR !== 'undefined') {
+            console.log('jsQR library loaded successfully');
+          } else {
+            console.error('jsQR library failed to load from CDN');
+            showStatus('Warning: QR detection library may not be available. Manual entry is recommended.');
+          }
+        }, 1000);
+      } else {
+        console.log('jsQR library loaded successfully on page load');
+      }
+    });
   </script>
 </body>
 </html>

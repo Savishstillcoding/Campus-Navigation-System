@@ -683,6 +683,44 @@ body {
   color: #64748b;
 }
 
+/* Scanned Room Styles */
+.room-box-scanned {
+  border: 3px solid #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+  padding-top: 50px;
+}
+
+.room-box-scanned:hover {
+  border-color: #059669;
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.3);
+}
+
+.location-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .stairs-section {
   display: flex;
   justify-content: center;

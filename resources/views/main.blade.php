@@ -191,6 +191,9 @@
     let currentFloor = 'all';
     let searchQuery = '';
     let roomsLoaded = false;
+    let scannedRoomId = null;
+    let scannedRoomFloor = null;
+    let scannedRoomName = null;
 
     // Load rooms from API
     async function loadRooms() {
@@ -358,7 +361,25 @@
 
       // Render floor plan if map section is clicked
       if (sectionName === 'map') {
-        renderFloorPlan(2); // Default to floor 2
+        // If there's a scanned room, render that floor first
+        if (scannedRoomFloor) {
+          const floorNum = parseInt(scannedRoomFloor);
+          renderFloorPlan(floorNum);
+          
+          // Update floor selector buttons
+          const floorBtns = document.querySelectorAll('.floor-select-btn');
+          floorBtns.forEach(btn => {
+            btn.classList.remove('active');
+            if (parseInt(btn.getAttribute('data-floor')) === floorNum) {
+              btn.classList.add('active');
+            }
+          });
+          
+          // Update display
+          document.getElementById('currentFloorDisplay').textContent = `Floor ${floorNum}`;
+        } else {
+          renderFloorPlan(2); // Default to floor 2
+        }
       }
     }
 
@@ -382,8 +403,10 @@
         // Top row - Computer Lab 1 and 2
         html += '<div class="floor-plan-top">';
         if (comlab1) {
+          const isScanned = scannedRoomId && comlab1.id == scannedRoomId;
           html += `
-            <div class="room-box" onclick="window.location.href='/room/${comlab1.id}';" style="cursor: pointer;">
+            <div class="room-box ${isScanned ? 'room-box-scanned' : ''}" onclick="window.location.href='/room/${comlab1.id}';" style="cursor: pointer; position: relative;">
+              ${isScanned ? '<div class="location-marker">📍 You are currently here</div>' : ''}
               <div class="room-box-icon">🏢</div>
               <div class="room-box-name">${comlab1.room_name}</div>
               <div class="room-box-description">${comlab1.description}</div>
@@ -391,8 +414,10 @@
           `;
         }
         if (comlab2) {
+          const isScanned = scannedRoomId && comlab2.id == scannedRoomId;
           html += `
-            <div class="room-box" onclick="window.location.href='/room/${comlab2.id}';" style="cursor: pointer;">
+            <div class="room-box ${isScanned ? 'room-box-scanned' : ''}" onclick="window.location.href='/room/${comlab2.id}';" style="cursor: pointer; position: relative;">
+              ${isScanned ? '<div class="location-marker">📍 You are currently here</div>' : ''}
               <div class="room-box-icon">🏢</div>
               <div class="room-box-name">${comlab2.room_name}</div>
               <div class="room-box-description">${comlab2.description}</div>
@@ -407,8 +432,10 @@
         // Bottom row - Computer Lab 3
         html += '<div class="floor-plan-bottom">';
         if (comlab3) {
+          const isScanned = scannedRoomId && comlab3.id == scannedRoomId;
           html += `
-            <div class="room-box" onclick="window.location.href='/room/${comlab3.id}';" style="cursor: pointer;">
+            <div class="room-box ${isScanned ? 'room-box-scanned' : ''}" onclick="window.location.href='/room/${comlab3.id}';" style="cursor: pointer; position: relative;">
+              ${isScanned ? '<div class="location-marker">📍 You are currently here</div>' : ''}
               <div class="room-box-icon">🏢</div>
               <div class="room-box-name">${comlab3.room_name}</div>
               <div class="room-box-description">${comlab3.description}</div>
@@ -432,8 +459,10 @@
         // Top row - Computer Lab 4 and CHS Room
         html += '<div class="floor-plan-top">';
         if (comlab4) {
+          const isScanned = scannedRoomId && comlab4.id == scannedRoomId;
           html += `
-            <div class="room-box" onclick="window.location.href='/room/${comlab4.id}';" style="cursor: pointer;">
+            <div class="room-box ${isScanned ? 'room-box-scanned' : ''}" onclick="window.location.href='/room/${comlab4.id}';" style="cursor: pointer; position: relative;">
+              ${isScanned ? '<div class="location-marker">📍 You are currently here</div>' : ''}
               <div class="room-box-icon">🏢</div>
               <div class="room-box-name">${comlab4.room_name}</div>
               <div class="room-box-description">${comlab4.description}</div>
@@ -441,8 +470,10 @@
           `;
         }
         if (chsRoom) {
+          const isScanned = scannedRoomId && chsRoom.id == scannedRoomId;
           html += `
-            <div class="room-box" onclick="window.location.href='/room/${chsRoom.id}';" style="cursor: pointer;">
+            <div class="room-box ${isScanned ? 'room-box-scanned' : ''}" onclick="window.location.href='/room/${chsRoom.id}';" style="cursor: pointer; position: relative;">
+              ${isScanned ? '<div class="location-marker">📍 You are currently here</div>' : ''}
               <div class="room-box-icon">🏢</div>
               <div class="room-box-name">${chsRoom.room_name}</div>
               <div class="room-box-description">${chsRoom.description}</div>
@@ -457,8 +488,10 @@
         // Bottom row - Faculty Room and CISCO Lab
         html += '<div class="floor-plan-bottom">';
         if (facultyRoom) {
+          const isScanned = scannedRoomId && facultyRoom.id == scannedRoomId;
           html += `
-            <div class="room-box" onclick="window.location.href='/room/${facultyRoom.id}';" style="cursor: pointer;">
+            <div class="room-box ${isScanned ? 'room-box-scanned' : ''}" onclick="window.location.href='/room/${facultyRoom.id}';" style="cursor: pointer; position: relative;">
+              ${isScanned ? '<div class="location-marker">📍 You are currently here</div>' : ''}
               <div class="room-box-icon">🏢</div>
               <div class="room-box-name">${facultyRoom.room_name}</div>
               <div class="room-box-description">${facultyRoom.description}</div>
@@ -466,8 +499,10 @@
           `;
         }
         if (ciscoLab) {
+          const isScanned = scannedRoomId && ciscoLab.id == scannedRoomId;
           html += `
-            <div class="room-box" onclick="window.location.href='/room/${ciscoLab.id}';" style="cursor: pointer;">
+            <div class="room-box ${isScanned ? 'room-box-scanned' : ''}" onclick="window.location.href='/room/${ciscoLab.id}';" style="cursor: pointer; position: relative;">
+              ${isScanned ? '<div class="location-marker">📍 You are currently here</div>' : ''}
               <div class="room-box-icon">🏢</div>
               <div class="room-box-name">${ciscoLab.room_name}</div>
               <div class="room-box-description">${ciscoLab.description}</div>
@@ -507,8 +542,32 @@
     // Load rooms when page loads
     document.addEventListener('DOMContentLoaded', function() {
       console.log('Page loaded, loading rooms');
+      
+      // Check for scanned room data
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('section') && urlParams.get('section') === 'map') {
+        scannedRoomId = sessionStorage.getItem('scannedRoomId');
+        scannedRoomFloor = sessionStorage.getItem('scannedRoomFloor');
+        scannedRoomName = sessionStorage.getItem('scannedRoomName');
+        
+        if (scannedRoomId && scannedRoomFloor) {
+          console.log('Scanned room detected:', scannedRoomName, 'Floor:', scannedRoomFloor);
+          // Clear the session storage
+          sessionStorage.removeItem('scannedRoomId');
+          sessionStorage.removeItem('scannedRoomFloor');
+          sessionStorage.removeItem('scannedRoomName');
+        }
+      }
+      
       loadRooms();
       setupFloorSelector();
+      
+      // If we have a scanned room, navigate to the map section
+      if (scannedRoomId && scannedRoomFloor) {
+        setTimeout(() => {
+          navigateToSection('map');
+        }, 100);
+      }
     });
   </script>
 </body>
