@@ -14,8 +14,8 @@
 
     body {
       font-family: 'Inter', sans-serif;
-      background: #fff;
-      color: #1f2937;
+      background: #ffffff;
+      color: #1a1a1a;
       line-height: 1.6;
     }
 
@@ -74,12 +74,13 @@
 
     .btn-signin {
       background: transparent;
-      color: #1e40af;
-      border: 1px solid #e5e7eb;
+      color: #2563eb;
+      border: 2px solid #2563eb;
     }
 
     .btn-signin:hover {
-      background: #f3f4f6;
+      background: #2563eb;
+      color: #ffffff;
     }
 
     .btn-signup {
@@ -96,7 +97,7 @@
     /* HERO SECTION */
     .hero {
       padding: 80px 40px;
-      background: linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 100%);
+      background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
       text-align: center;
     }
 
@@ -109,7 +110,7 @@
       font-size: 48px;
       font-weight: 800;
       margin-bottom: 16px;
-      color: #0f172a;
+      color: #2563eb;
       line-height: 1.2;
     }
 
@@ -170,7 +171,7 @@
 
     /* FEATURES SECTION */
     .features {
-      padding: 80px 40px;
+      padding: 80px 40fffpx;
       background: #fff;
     }
 
@@ -188,7 +189,7 @@
       font-size: 36px;
       font-weight: 800;
       margin-bottom: 12px;
-      color: #0f172a;
+      color: #2563eb;
     }
 
     .features-header p {
@@ -204,17 +205,17 @@
 
     .feature-card {
       padding: 32px;
-      background: #f8fafc;
+      background: #ffffff;
       border-radius: 12px;
-      border: 1px solid #e2e8f0;
+      border: 2px solid #FFC107;
       transition: all 0.3s ease;
     }
 
     .feature-card:hover {
-      background: #f0f9ff;
+      background: #f0f7ff;
       border-color: #2563eb;
       transform: translateY(-4px);
-      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.1);
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
     }
 
     .feature-icon {
@@ -238,7 +239,7 @@
     /* HOW IT WORKS SECTION */
     .how-it-works {
       padding: 80px 40px;
-      background: linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 100%);
+      background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
     }
 
     .how-container {
@@ -251,7 +252,7 @@
       font-size: 36px;
       font-weight: 800;
       margin-bottom: 60px;
-      color: #0f172a;
+      color: #2563eb;
     }
 
     .steps {
@@ -268,8 +269,8 @@
     .step-number {
       width: 48px;
       height: 48px;
-      background: #2563eb;
-      color: white;
+      background: #FFC107;
+      color: #1a1a1a;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -294,8 +295,8 @@
     /* CTA SECTION */
     .cta {
       padding: 80px 40px;
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-      color: white;
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      color: #ffffff;
       text-align: center;
     }
 
@@ -319,8 +320,8 @@
     /* FOOTER */
     footer {
       padding: 32px 40px;
-      background: #0f172a;
-      color: #9ca3af;
+      background: #1e3a8a;
+      color: #ffffff;
       text-align: center;
       font-size: 14px;
     }
@@ -401,7 +402,6 @@
         Discover room locations instantly using QR codes. Track your activities and explore our interactive floor maps.
       </p>
       <div class="hero-buttons">
-        <a href="{{ route('qr-scanner') }}" class="btn-primary">📱 Start Scanning</a>
         <a href="{{ route('signin') }}" class="btn-secondary">Sign In to Explore</a>
       </div>
     </div>

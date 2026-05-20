@@ -73,7 +73,7 @@
         </header>
 
         <div class="quick-actions">
-          <div class="action-card">
+          <div class="action-card" onclick="navigateToSection('rooms');" style="cursor: pointer;">
             <div class="card-icon">🏢</div>
             <h3>Browse Rooms</h3>
             <p>View all available rooms</p>
@@ -83,7 +83,7 @@
             <h3>Scan QR Code</h3>
             <p>Find your room</p>
           </div>
-          <div class="action-card">
+          <div class="action-card" onclick="navigateToSection('map');" style="cursor: pointer;">
             <div class="card-icon">🗺️</div>
             <h3>View Map</h3>
             <p>Interactive floor map</p>
@@ -125,11 +125,34 @@
 
       <!-- Map Section -->
       <section id="map" class="content-section">
-        <h2>Navigation Map</h2>
-        <div class="floors">
-          <button class="floor-btn">First Floor</button>
-          <button class="floor-btn">Second Floor</button>
-          <button class="floor-btn">Third Floor</button>
+        <header class="content-header">
+          <h2>Navigation Map</h2>
+          <p class="subtitle">Interactive floor plan of the LNU IT Building.</p>
+        </header>
+        
+        <div class="map-container">
+          <!-- Floor Location Header -->
+          <div class="map-location">
+            <span class="location-icon">📍</span>
+            <span class="location-text">IT Building — <span id="currentFloorDisplay">Floor 2</span></span>
+          </div>
+
+          <!-- Floor Selection Buttons -->
+          <div class="floor-selector">
+            <button class="floor-select-btn active" data-floor="2">Floor 2</button>
+            <button class="floor-select-btn" data-floor="3">Floor 3</button>
+          </div>
+
+          <!-- Floor Plan -->
+          <div class="floor-plan" id="floorPlan">
+            <!-- Floor plan will be dynamically generated here -->
+          </div>
+
+          <!-- Help Text -->
+          <div class="map-help-text">
+            <span class="info-icon">ℹ️</span>
+            Hover over a room to see directions. Click any room to view its QR code and sign in or out.
+          </div>
         </div>
       </section>
 
@@ -307,26 +330,185 @@
       item.addEventListener('click', (e) => {
         e.preventDefault();
         const sectionName = item.getAttribute('data-section');
-
-        // Remove active class from all menu items and sections
-        menuItems.forEach(m => m.classList.remove('active'));
-        sections.forEach(s => s.classList.remove('active'));
-
-        // Add active class to clicked item and corresponding section
-        item.classList.add('active');
-        document.getElementById(sectionName).classList.add('active');
-
-        // Load rooms if rooms section is clicked
-        if (sectionName === 'rooms') {
-          loadRooms();
-        }
+        navigateToSection(sectionName);
       });
     });
+
+    // Navigate to section function
+    function navigateToSection(sectionName) {
+      // Remove active class from all menu items and sections
+      menuItems.forEach(m => m.classList.remove('active'));
+      sections.forEach(s => s.classList.remove('active'));
+
+      // Add active class to menu item and section
+      const activeMenuItem = document.querySelector(`[data-section="${sectionName}"]`);
+      if (activeMenuItem) {
+        activeMenuItem.classList.add('active');
+      }
+      
+      const targetSection = document.getElementById(sectionName);
+      if (targetSection) {
+        targetSection.classList.add('active');
+      }
+
+      // Load rooms if rooms section is clicked
+      if (sectionName === 'rooms') {
+        loadRooms();
+      }
+
+      // Render floor plan if map section is clicked
+      if (sectionName === 'map') {
+        renderFloorPlan(2); // Default to floor 2
+      }
+    }
+
+    // Floor plan rendering
+    function renderFloorPlan(floor) {
+      const floorPlanContainer = document.getElementById('floorPlan');
+      const floorRooms = allRooms.filter(room => room.floor === floor);
+      
+      console.log('Floor ' + floor + ' all rooms:', floorRooms);
+      
+      let html = '<div class="floor-plan-layout">';
+      
+      if (floor === 2) {
+        // Floor 2 layout: Computer Lab 1 & 2 on top, Corridor middle, Computer Lab 3 bottom
+        const comlab1 = floorRooms.find(room => room.room_name === 'Computer Lab 1');
+        const comlab2 = floorRooms.find(room => room.room_name === 'Computer Lab 2');
+        const comlab3 = floorRooms.find(room => room.room_name === 'Computer Lab 3');
+
+        console.log('Floor 2 - Lab 1:', comlab1, 'Lab 2:', comlab2, 'Lab 3:', comlab3);
+
+        // Top row - Computer Lab 1 and 2
+        html += '<div class="floor-plan-top">';
+        if (comlab1) {
+          html += `
+            <div class="room-box" onclick="window.location.href='/room/${comlab1.id}';" style="cursor: pointer;">
+              <div class="room-box-icon">🏢</div>
+              <div class="room-box-name">${comlab1.room_name}</div>
+              <div class="room-box-description">${comlab1.description}</div>
+            </div>
+          `;
+        }
+        if (comlab2) {
+          html += `
+            <div class="room-box" onclick="window.location.href='/room/${comlab2.id}';" style="cursor: pointer;">
+              <div class="room-box-icon">🏢</div>
+              <div class="room-box-name">${comlab2.room_name}</div>
+              <div class="room-box-description">${comlab2.description}</div>
+            </div>
+          `;
+        }
+        html += '</div>';
+
+        // Main Corridor (horizontal)
+        html += '<div class="floor-plan-corridor">Main Corridor</div>';
+
+        // Bottom row - Computer Lab 3
+        html += '<div class="floor-plan-bottom">';
+        if (comlab3) {
+          html += `
+            <div class="room-box" onclick="window.location.href='/room/${comlab3.id}';" style="cursor: pointer;">
+              <div class="room-box-icon">🏢</div>
+              <div class="room-box-name">${comlab3.room_name}</div>
+              <div class="room-box-description">${comlab3.description}</div>
+            </div>
+          `;
+        }
+        html += '</div>';
+
+        html += '<div class="stairs-section"><span class="stairs-icon">⬆️</span> STAIRS FROM 1ST FLOOR</div>';
+      } else if (floor === 3) {
+        // Floor 3 layout: 2x2 grid
+        // Computer Lab 4 (top-left), CHS Room (top-right)
+        // Faculty Room (bottom-left), CISCO Lab (bottom-right)
+        const comlab4 = floorRooms.find(room => room.room_name === 'Computer Lab 4');
+        const ciscoLab = floorRooms.find(room => room.room_name === 'CISCO Lab');
+        const facultyRoom = floorRooms.find(room => room.room_name === 'Faculty Room');
+        const chsRoom = floorRooms.find(room => room.room_name === 'CHS Room');
+
+        console.log('Floor 3 - Lab 4:', comlab4, 'CISCO:', ciscoLab, 'Faculty:', facultyRoom, 'CHS:', chsRoom);
+
+        // Top row - Computer Lab 4 and CHS Room
+        html += '<div class="floor-plan-top">';
+        if (comlab4) {
+          html += `
+            <div class="room-box" onclick="window.location.href='/room/${comlab4.id}';" style="cursor: pointer;">
+              <div class="room-box-icon">🏢</div>
+              <div class="room-box-name">${comlab4.room_name}</div>
+              <div class="room-box-description">${comlab4.description}</div>
+            </div>
+          `;
+        }
+        if (chsRoom) {
+          html += `
+            <div class="room-box" onclick="window.location.href='/room/${chsRoom.id}';" style="cursor: pointer;">
+              <div class="room-box-icon">🏢</div>
+              <div class="room-box-name">${chsRoom.room_name}</div>
+              <div class="room-box-description">${chsRoom.description}</div>
+            </div>
+          `;
+        }
+        html += '</div>';
+
+        // Main Corridor (horizontal)
+        html += '<div class="floor-plan-corridor">Main Corridor</div>';
+
+        // Bottom row - Faculty Room and CISCO Lab
+        html += '<div class="floor-plan-bottom">';
+        if (facultyRoom) {
+          html += `
+            <div class="room-box" onclick="window.location.href='/room/${facultyRoom.id}';" style="cursor: pointer;">
+              <div class="room-box-icon">🏢</div>
+              <div class="room-box-name">${facultyRoom.room_name}</div>
+              <div class="room-box-description">${facultyRoom.description}</div>
+            </div>
+          `;
+        }
+        if (ciscoLab) {
+          html += `
+            <div class="room-box" onclick="window.location.href='/room/${ciscoLab.id}';" style="cursor: pointer;">
+              <div class="room-box-icon">🏢</div>
+              <div class="room-box-name">${ciscoLab.room_name}</div>
+              <div class="room-box-description">${ciscoLab.description}</div>
+            </div>
+          `;
+        }
+        html += '</div>';
+
+        html += '<div class="stairs-section"><span class="stairs-icon">⬆️</span> STAIRS FROM 2ND FLOOR</div>';
+      }
+
+      html += '</div>';
+      floorPlanContainer.innerHTML = html;
+    }
+
+    // Setup floor selector buttons
+    function setupFloorSelector() {
+      const floorBtns = document.querySelectorAll('.floor-select-btn');
+      floorBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const floor = parseInt(btn.getAttribute('data-floor'));
+          
+          // Update active button
+          floorBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          
+          // Update display
+          document.getElementById('currentFloorDisplay').textContent = `Floor ${floor}`;
+          
+          // Render floor plan
+          renderFloorPlan(floor);
+        });
+      });
+    }
 
     // Load rooms when page loads
     document.addEventListener('DOMContentLoaded', function() {
       console.log('Page loaded, loading rooms');
       loadRooms();
+      setupFloorSelector();
     });
   </script>
 </body>
