@@ -16,5 +16,6 @@ class Room extends Model
         'qr_code',
         'description',
         'building',
+        'location',
     ];
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\QRController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -37,5 +38,12 @@ Route::get('/visitor-home', function () {
 Route::get('/main', function () {
     return view('main'); // or dashboard.blade.php
 })->name('portal');
+
+// QR/API Routes
+Route::prefix('api/qr')->group(function () {
+    Route::post('/scan', [QRController::class, 'scan'])->name('qr.scan');
+    Route::get('/rooms', [QRController::class, 'getAllRooms'])->name('qr.rooms');
+    Route::get('/rooms/floor/{floor}', [QRController::class, 'getRoomsByFloor'])->name('qr.rooms.floor');
+});
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
