@@ -163,23 +163,17 @@
           <thead>
             <tr>
               <th>Activity</th>
-              <th>Date</th>
+              <th>Date & Time</th>
               <th>Status</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Scanned QR</td>
-              <td>2026-05-18</td>
-              <td><span class="badge done">DONE</span></td>
-            </tr>
-            <tr>
-              <td>Visited COMLAB 1</td>
-              <td>2026-05-17</td>
-              <td><span class="badge pending">PENDING</span></td>
-            </tr>
+          <tbody id="activity-log-body">
+            <!-- Activity logs will be loaded dynamically here -->
           </tbody>
         </table>
+        <div id="no-activity-message" style="text-align: center; padding: 20px; color: #64748b;">
+          No activity logged yet. Start scanning QR codes!
+        </div>
       </section>
     </main>
   </div>
@@ -550,6 +544,49 @@
       });
     }
 
+    // Load activity logs from the server
+    async function loadActivityLogs() {
+      try {
+        const response = await fetch('/api/activity-logs');
+        const result = await response.json();
+        
+        if (result.success && result.data.length > 0) {
+          const activityLogBody = document.getElementById('activity-log-body');
+          const noActivityMessage = document.getElementById('no-activity-message');
+          
+          activityLogBody.innerHTML = result.data.map(log => {
+            const scanDateTime = new Date(log.scan_time).toLocaleString('en-US', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: true
+            });
+            
+            const statusBadgeClass = log.status.toLowerCase() === 'completed' ? 'done' : 'pending';
+            const statusText = log.status.charAt(0).toUpperCase() + log.status.slice(1).toLowerCase();
+            
+            return `
+              <tr>
+                <td>${log.activity_description}</td>
+                <td>${scanDateTime}</td>
+                <td><span class="badge ${statusBadgeClass}">${statusText}</span></td>
+              </tr>
+            `;
+          }).join('');
+          
+          noActivityMessage.style.display = 'none';
+        } else {
+          document.getElementById('no-activity-message').style.display = 'block';
+          document.getElementById('activity-log-body').innerHTML = '';
+        }
+      } catch (error) {
+        console.error('Error loading activity logs:', error);
+      }
+    }
+
     // Load rooms when page loads
     document.addEventListener('DOMContentLoaded', function() {
       console.log('Page loaded, loading rooms');
@@ -572,6 +609,7 @@
       
       loadRooms().then(() => {
         setupFloorSelector();
+        loadActivityLogs(); // Load activity logs
         
         // If we have a scanned room, navigate to the map section
         if (scannedRoomId && scannedRoomFloor) {

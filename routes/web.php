@@ -52,4 +52,9 @@ Route::prefix('api/qr')->group(function () {
     Route::get('/rooms/floor/{floor}', [QRController::class, 'getRoomsByFloor'])->name('qr.rooms.floor');
 });
 
+// Activity Log API Route
+Route::prefix('api')->group(function () {
+    Route::get('/activity-logs', [QRController::class, 'getActivityLogs'])->name('activity-logs');
+});
+
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
