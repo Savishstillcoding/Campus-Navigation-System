@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="true">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Student Portal - LNU Smart Nav</title>
   <link rel="stylesheet" href="/css/portal.css">
 </head>
@@ -195,7 +197,12 @@
       
       return new Promise((resolve) => {
         try {
-          fetch('/api/qr/rooms')
+          fetch('/api/qr/rooms', {
+            credentials: 'include',
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            }
+          })
             .then(response => response.json())
             .then(result => {
               allRooms = result.data || [];
@@ -547,7 +554,12 @@
     // Load activity logs from the server
     async function loadActivityLogs() {
       try {
-        const response = await fetch('/api/activity-logs');
+        const response = await fetch('/api/activity-logs', {
+          credentials: 'include',
+          headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          }
+        });
         const result = await response.json();
         
         if (result.success && result.data.length > 0) {
